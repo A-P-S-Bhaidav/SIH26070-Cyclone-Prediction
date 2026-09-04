@@ -1,20 +1,17 @@
 /**
- * CycloneAI Dashboard — Main Layout Component
- * Three-panel layout: Storm List | Map | Analysis
+ * Dashboard — Main layout with loading screen and theme toggle.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from './Header'
 import StormList from './StormList'
 import MapView from './MapView'
 import AnalysisPanel from './AnalysisPanel'
 
-const DEMO_CYCLONES = [
+const DEMO = [
   {
     storm_id: 'AMPHAN_2020', storm_name: 'Amphan',
     position: { lat: 15.2, lon: 87.1 }, vmax_kt: 130, mslp_hpa: 920,
-    category: 'ESCS', category_full: 'Extremely Severe Cyclonic Storm',
-    is_active: true, ri_probability: 0.82, alert_level: 'HIGH',
-    t_number: 6.5, dvorak_pattern: 'Eye',
+    category: 'ESCS', ri_probability: 0.82, t_number: 6.5, dvorak_pattern: 'Eye',
     track: [
       { lat: 13.0, lon: 87.5, t: -24, vmax: 80 }, { lat: 13.8, lon: 87.4, t: -18, vmax: 95 },
       { lat: 14.5, lon: 87.2, t: -12, vmax: 110 }, { lat: 15.2, lon: 87.1, t: 0, vmax: 130 },
@@ -37,14 +34,12 @@ const DEMO_CYCLONES = [
       { district: 'Kolkata', state: 'West Bengal', probability: 0.45 },
       { district: 'Balasore', state: 'Odisha', probability: 0.32 },
     ],
-    timeline: generateTimeline(130, 920, 12, 8),
+    timeline: mkTimeline(130, 12, 8),
   },
   {
     storm_id: 'FANI_2019', storm_name: 'Fani',
     position: { lat: 14.8, lon: 85.9 }, vmax_kt: 115, mslp_hpa: 934,
-    category: 'ESCS', category_full: 'Extremely Severe Cyclonic Storm',
-    is_active: true, ri_probability: 0.65, alert_level: 'ELEVATED',
-    t_number: 5.5, dvorak_pattern: 'CDO',
+    category: 'ESCS', ri_probability: 0.65, t_number: 5.5, dvorak_pattern: 'CDO',
     track: [
       { lat: 12.5, lon: 86.5, t: -24, vmax: 65 }, { lat: 13.2, lon: 86.3, t: -18, vmax: 80 },
       { lat: 14.0, lon: 86.1, t: -12, vmax: 95 }, { lat: 14.8, lon: 85.9, t: 0, vmax: 115 },
@@ -66,14 +61,12 @@ const DEMO_CYCLONES = [
       { district: 'Ganjam', state: 'Odisha', probability: 0.52 },
       { district: 'Srikakulam', state: 'Andhra Pradesh', probability: 0.35 },
     ],
-    timeline: generateTimeline(115, 934, 12, 8),
+    timeline: mkTimeline(115, 12, 8),
   },
   {
     storm_id: 'TAUKTAE_2021', storm_name: 'Tauktae',
     position: { lat: 16.5, lon: 72.8 }, vmax_kt: 95, mslp_hpa: 950,
-    category: 'VSCS', category_full: 'Very Severe Cyclonic Storm',
-    is_active: true, ri_probability: 0.45, alert_level: 'MODERATE',
-    t_number: 4.5, dvorak_pattern: 'CDO',
+    category: 'VSCS', ri_probability: 0.45, t_number: 4.5, dvorak_pattern: 'CDO',
     track: [
       { lat: 14.0, lon: 73.5, t: -24, vmax: 45 }, { lat: 14.8, lon: 73.3, t: -18, vmax: 60 },
       { lat: 15.5, lon: 73.1, t: -12, vmax: 75 }, { lat: 16.5, lon: 72.8, t: 0, vmax: 95 },
@@ -95,45 +88,64 @@ const DEMO_CYCLONES = [
       { district: 'Porbandar', state: 'Gujarat', probability: 0.48 },
       { district: 'Mumbai', state: 'Maharashtra', probability: 0.22 },
     ],
-    timeline: generateTimeline(95, 950, 12, 8),
+    timeline: mkTimeline(95, 12, 8),
   },
 ]
 
-function generateTimeline(baseVmax: number, _baseMslp: number, nPast: number, nFuture: number) {
-  const ts: number[] = [], vmax: number[] = [], mslp: number[] = []
-  const vmaxUpper: number[] = [], vmaxLower: number[] = []
-  for (let i = -nPast; i <= nFuture; i++) {
-    const hours = i * 6
-    const phase = i / nPast
-    const v = baseVmax * (0.4 + 0.6 * Math.exp(-0.5 * Math.pow(phase - 0.5, 2) / 0.3))
-    const m = 1010 - Math.pow(v / 6.3, 2)
+function mkTimeline(base: number, nP: number, nF: number) {
+  const ts: number[] = [], vmax: number[] = [], mslp: number[] = [], u: number[] = [], l: number[] = []
+  for (let i = -nP; i <= nF; i++) {
+    const h = i * 6, ph = i / nP
+    const v = base * (0.4 + 0.6 * Math.exp(-0.5 * ((ph - 0.5) ** 2) / 0.3))
     const unc = Math.max(0, i) * 2 + 3
-    ts.push(hours); vmax.push(Math.round(v * 10) / 10); mslp.push(Math.round(m * 10) / 10)
-    vmaxUpper.push(Math.round((v + unc) * 10) / 10)
-    vmaxLower.push(Math.round(Math.max(15, v - unc) * 10) / 10)
+    ts.push(h); vmax.push(+(v).toFixed(1)); mslp.push(+(1010 - (v / 6.3) ** 2).toFixed(1))
+    u.push(+(v + unc).toFixed(1)); l.push(+Math.max(15, v - unc).toFixed(1))
   }
-  return { timestamps: ts, vmax, mslp, vmaxUpper, vmaxLower }
+  return { timestamps: ts, vmax, mslp, vmaxUpper: u, vmaxLower: l }
 }
 
 export default function Dashboard() {
-  const [cyclones] = useState<any[]>(DEMO_CYCLONES)
-  const [selectedStorm, setSelectedStorm] = useState<string>(DEMO_CYCLONES[0].storm_id)
+  const [loading, setLoading] = useState(true)
+  const [cyclones] = useState(DEMO)
+  const [selected, setSelected] = useState(DEMO[0].storm_id)
   const [isLive] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('vn-theme') || 'light')
 
-  const activeStorm = cyclones.find(c => c.storm_id === selectedStorm) || cyclones[0]
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('vn-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 2400)
+    return () => clearTimeout(t)
+  }, [])
+
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light')
+  const active = cyclones.find(c => c.storm_id === selected) || cyclones[0]
 
   return (
     <>
-      <Header isLive={isLive} stormCount={cyclones.length} />
+      {/* Loading Screen */}
+      <div className={`loading-screen ${loading ? '' : 'fade-out'}`}>
+        <img src="/favicon.jpg" alt="Vayu Netra" className="loading-logo" style={{ borderRadius: '16px' }} />
+        <div className="loading-title">Vayu Netra</div>
+        <div className="loading-sub">NIO Cyclone Prediction System</div>
+        <div className="loading-spinner" />
+        <div className="loading-bar-track"><div className="loading-bar-fill" /></div>
+      </div>
+
+      {/* Main App */}
+      <Header isLive={isLive} stormCount={cyclones.length} theme={theme} onToggleTheme={toggleTheme} />
       <div className="dashboard-body">
         <aside className="panel-left">
-          <StormList cyclones={cyclones} selectedId={selectedStorm} onSelect={setSelectedStorm} />
+          <StormList cyclones={cyclones} selectedId={selected} onSelect={setSelected} />
         </aside>
         <main className="panel-center">
-          <MapView storm={activeStorm} />
+          <MapView storm={active} />
         </main>
         <aside className="panel-right">
-          <AnalysisPanel storm={activeStorm} />
+          <AnalysisPanel storm={active} />
         </aside>
       </div>
     </>

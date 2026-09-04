@@ -1,53 +1,58 @@
 /**
- * MapView — Real interactive map using Leaflet with cyclone tracks,
- * probability cones, top-5 paths, and landfall markers.
+ * MapView — Leaflet map with 20 predicted paths, expanding cones, landfall markers.
+ * Uses OpenStreetMap tiles (no API key required).
  */
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, TileLayer, Polyline, Polygon, Circle, CircleMarker, Popup, useMap } from 'react-leaflet'
-
+import { MapContainer, TileLayer, Polyline, Polygon, Circle, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
-
-const CATEGORY_COLORS: Record<string, string> = {
-  TD: '#3b82f6', CS: '#0ea5e9', SCS: '#10b981',
-  VSCS: '#f59e0b', ESCS: '#f97316', SuCS: '#ef4444',
+const SEV: Record<string, string> = {
+  TD: '#3b82f6', CS: '#0ea5e9', SCS: '#10b981', VSCS: '#f59e0b', ESCS: '#f97316', SuCS: '#ef4444',
 }
 
-interface MapViewProps { storm: any }
-
-/** Seeded PRNG from storm_id for deterministic path generation */
-function seededRandom(seed: string) {
+function seededRng(seed: string) {
   let h = 0
   for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) | 0
-  return () => { h = (h * 16807) % 2147483647; return (h & 0x7fffffff) / 2147483647 }
+  return () => { h = (h * 16807 + 12345) % 2147483647; return (h & 0x7fffffff) / 2147483647 }
 }
 
-/** Generate 5 deterministic probable paths */
-function generateProbablePaths(storm: any) {
-  const forecast = (storm.track || []).filter((p: any) => p.t >= 0)
-  if (forecast.length < 2) return []
-  const rng = seededRandom(storm.storm_id)
-  const probs = [32, 24, 18, 14, 12]
-  return probs.map((prob, idx) => {
-    const spread = (idx + 1) * 0.35
-    const points = forecast.map((p: any, i: number) => {
-      const jLat = (rng() - 0.5) * spread * (1 + i * 0.25)
-      const jLon = (rng() - 0.5) * spread * (1 + i * 0.25)
-      return [p.lat + jLat, p.lon + jLon] as [number, number]
+function generate20Paths(storm: any) {
+  const fc = (storm.track || []).filter((p: any) => p.t >= 0)
+  if (fc.length < 2) return []
+  const rng = seededRng(storm.storm_id + 'paths')
+  const total = 20
+  const probabilities: number[] = []
+  let remaining = 100
+  for (let i = 0; i < total; i++) {
+    const p = i === total - 1 ? remaining : Math.max(1, Math.round(remaining * (0.15 + rng() * 0.25)))
+    probabilities.push(p)
+    remaining -= p
+    if (remaining <= 0) remaining = 1
+  }
+  probabilities.sort((a, b) => b - a)
+
+  return probabilities.map((prob, idx) => {
+    const spread = 0.15 + idx * 0.12
+    const points: [number, number][] = fc.map((p: any, i: number) => {
+      const jLat = (rng() - 0.5) * spread * (1 + i * 0.3)
+      const jLon = (rng() - 0.5) * spread * (1 + i * 0.3)
+      return [p.lat + jLat, p.lon + jLon]
     })
-    return { points, probability: prob, weight: [4, 3, 2.5, 2, 1.5][idx], opacity: [0.9, 0.7, 0.5, 0.35, 0.2][idx] }
+    const maxOpacity = 0.8
+    const minOpacity = 0.05
+    const opacity = maxOpacity - (idx / (total - 1)) * (maxOpacity - minOpacity)
+    const weight = Math.max(0.5, 3.5 - idx * 0.15)
+    return { points, probability: prob, opacity, weight }
   })
 }
 
-/** Build expanding cone polygon from forecast points */
-function buildConePolygon(forecast: any[], radiusDeg: number): [number, number][] {
-  if (forecast.length < 2) return []
-  const left: [number, number][] = []
-  const right: [number, number][] = []
-  forecast.forEach((p: any, i: number) => {
-    const r = radiusDeg * (0.3 + i * 0.7 / (forecast.length - 1))
-    const dx = i < forecast.length - 1 ? forecast[i + 1].lon - p.lon : p.lon - forecast[i - 1].lon
-    const dy = i < forecast.length - 1 ? forecast[i + 1].lat - p.lat : p.lat - forecast[i - 1].lat
+function buildCone(fc: any[], radius: number): [number, number][] {
+  if (fc.length < 2) return []
+  const left: [number, number][] = [], right: [number, number][] = []
+  fc.forEach((p: any, i: number) => {
+    const r = radius * (0.2 + i * 0.8 / (fc.length - 1))
+    const dx = i < fc.length - 1 ? fc[i + 1].lon - p.lon : p.lon - fc[i - 1].lon
+    const dy = i < fc.length - 1 ? fc[i + 1].lat - p.lat : p.lat - fc[i - 1].lat
     const len = Math.sqrt(dx * dx + dy * dy) || 1
     const nx = -dy / len, ny = dx / len
     left.push([p.lat + nx * r, p.lon + ny * r])
@@ -56,211 +61,113 @@ function buildConePolygon(forecast: any[], radiusDeg: number): [number, number][
   return [...left, ...right.reverse()]
 }
 
-/** Auto-fit map to storm track */
 function FitBounds({ storm }: { storm: any }) {
   const map = useMap()
   useEffect(() => {
-    const track = storm.track || []
-    if (track.length > 0) {
-      const lats = track.map((p: any) => p.lat)
-      const lons = track.map((p: any) => p.lon)
-      const pad = 2
-      map.fitBounds([
-        [Math.min(...lats) - pad, Math.min(...lons) - pad],
-        [Math.max(...lats) + pad, Math.max(...lons) + pad],
-      ], { padding: [30, 30] })
+    const t = storm.track || []
+    if (t.length > 0) {
+      const lats = t.map((p: any) => p.lat), lons = t.map((p: any) => p.lon)
+      map.fitBounds([[Math.min(...lats) - 1.5, Math.min(...lons) - 1.5], [Math.max(...lats) + 1.5, Math.max(...lons) + 1.5]], { padding: [20, 20] })
     }
   }, [storm.storm_id])
   return null
 }
 
-export default function MapView({ storm }: MapViewProps) {
+const DISTRICTS: Record<string, [number, number]> = {
+  'South 24 Parganas': [21.87, 88.43], 'North 24 Parganas': [22.62, 88.85],
+  'Kolkata': [22.57, 88.36], 'Balasore': [21.49, 86.93], 'Puri': [19.81, 85.83],
+  'Ganjam': [19.58, 84.81], 'Srikakulam': [18.3, 84], 'Junagadh': [21.52, 70.46],
+  'Porbandar': [21.64, 69.6], 'Mumbai': [19.08, 72.88],
+}
+
+export default function MapView({ storm }: { storm: any }) {
   const [showCone, setShowCone] = useState(true)
   const [showPaths, setShowPaths] = useState(true)
   const [showLandfall, setShowLandfall] = useState(true)
 
-  const color = CATEGORY_COLORS[storm.category] || '#3b82f6'
+  const color = SEV[storm.category] || '#3b82f6'
   const track = storm.track || []
-  const pastTrack: [number, number][] = track.filter((p: any) => p.t <= 0).map((p: any) => [p.lat, p.lon])
-  const futureTrack: [number, number][] = track.filter((p: any) => p.t >= 0).map((p: any) => [p.lat, p.lon])
-  const currentPos = track.find((p: any) => p.t === 0)
-  const forecastPoints = track.filter((p: any) => p.t > 0)
+  const past: [number, number][] = track.filter((p: any) => p.t <= 0).map((p: any) => [p.lat, p.lon])
+  const future: [number, number][] = track.filter((p: any) => p.t >= 0).map((p: any) => [p.lat, p.lon])
+  const cur = track.find((p: any) => p.t === 0)
+  const fcPoints = track.filter((p: any) => p.t > 0)
+  const fc = track.filter((p: any) => p.t >= 0)
 
-  const paths = useMemo(() => generateProbablePaths(storm), [storm.storm_id])
-
-  const forecast = track.filter((p: any) => p.t >= 0)
-  const cone50 = useMemo(() => buildConePolygon(forecast, 0.6), [storm.storm_id])
-  const cone90 = useMemo(() => buildConePolygon(forecast, 1.4), [storm.storm_id])
-
-  const districtCoords: Record<string, [number, number]> = {
-    'South 24 Parganas': [21.87, 88.43], 'North 24 Parganas': [22.62, 88.85],
-    'Kolkata': [22.57, 88.36], 'Balasore': [21.49, 86.93],
-    'Puri': [19.81, 85.83], 'Ganjam': [19.58, 84.81],
-    'Srikakulam': [18.30, 84.00], 'Junagadh': [21.52, 70.46],
-    'Porbandar': [21.64, 69.60], 'Mumbai': [19.08, 72.88],
-  }
+  const paths = useMemo(() => generate20Paths(storm), [storm.storm_id])
+  const cone50 = useMemo(() => buildCone(fc, 0.6), [storm.storm_id])
+  const cone90 = useMemo(() => buildCone(fc, 1.4), [storm.storm_id])
 
   return (
     <div className="map-wrapper">
-      <MapContainer
-        center={currentPos ? [currentPos.lat, currentPos.lon] : [15, 82]}
-        zoom={5}
-        style={{ width: '100%', height: '100%' }}
-        zoomControl={true}
-        attributionControl={false}
-      >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        />
+      <MapContainer center={cur ? [cur.lat, cur.lon] : [15, 82]} zoom={5}
+        style={{ width: '100%', height: '100%' }} zoomControl={true} attributionControl={false}>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <FitBounds storm={storm} />
 
-        {/* 90% Cone */}
         {showCone && cone90.length > 2 && (
-          <Polygon
-            positions={cone90}
-            pathOptions={{ color: '#3b82f6', weight: 1, dashArray: '6,4', fillColor: '#3b82f6', fillOpacity: 0.05 }}
-          />
+          <Polygon positions={cone90} pathOptions={{ color: '#3b82f6', weight: 1, dashArray: '5,4', fillColor: '#3b82f6', fillOpacity: 0.04 }} />
         )}
-
-        {/* 50% Cone */}
         {showCone && cone50.length > 2 && (
-          <Polygon
-            positions={cone50}
-            pathOptions={{ color: '#2563eb', weight: 1.5, fillColor: '#2563eb', fillOpacity: 0.1 }}
-          />
+          <Polygon positions={cone50} pathOptions={{ color: '#2563eb', weight: 1.5, fillColor: '#2563eb', fillOpacity: 0.08 }} />
         )}
 
-        {/* Top 5 Probable Paths */}
         {showPaths && paths.map((path, i) => (
-          <Polyline
-            key={`path-${i}`}
-            positions={path.points}
-            pathOptions={{
-              color,
-              weight: path.weight,
-              opacity: path.opacity,
-              dashArray: i > 0 ? '4,4' : undefined,
-            }}
-          >
-            <Popup>Path {i + 1}: {path.probability}% probability</Popup>
+          <Polyline key={`p${i}`} positions={path.points}
+            pathOptions={{ color, weight: path.weight, opacity: path.opacity, dashArray: i > 2 ? '3,3' : undefined }}>
+            {i < 5 && <Tooltip permanent direction="right" offset={[6, 0]}
+              className="path-tooltip">{path.probability}%</Tooltip>}
           </Polyline>
         ))}
 
-        {/* Past Track (solid) */}
-        {pastTrack.length > 1 && (
-          <Polyline positions={pastTrack} pathOptions={{ color, weight: 3.5, opacity: 0.9 }} />
-        )}
+        {past.length > 1 && <Polyline positions={past} pathOptions={{ color, weight: 3, opacity: 0.9 }} />}
+        {future.length > 1 && <Polyline positions={future} pathOptions={{ color, weight: 2.5, opacity: 0.7, dashArray: '8,5' }} />}
 
-        {/* Future Track (dashed) */}
-        {futureTrack.length > 1 && (
-          <Polyline positions={futureTrack} pathOptions={{ color, weight: 2.5, opacity: 0.7, dashArray: '8,6' }} />
-        )}
-
-        {/* Past position dots */}
         {track.filter((p: any) => p.t < 0).map((p: any, i: number) => (
-          <CircleMarker
-            key={`past-${i}`}
-            center={[p.lat, p.lon]}
-            radius={3}
-            pathOptions={{ color, fillColor: color, fillOpacity: 1, weight: 0 }}
-          />
+          <CircleMarker key={`h${i}`} center={[p.lat, p.lon]} radius={2.5}
+            pathOptions={{ color, fillColor: color, fillOpacity: 1, weight: 0 }} />
         ))}
 
-        {/* Future position dots with lead labels */}
-        {forecastPoints.map((p: any, i: number) => (
-          <CircleMarker
-            key={`fut-${i}`}
-            center={[p.lat, p.lon]}
-            radius={4}
-            pathOptions={{ color, fillColor: 'white', fillOpacity: 1, weight: 2 }}
-          >
+        {fcPoints.map((p: any, i: number) => (
+          <CircleMarker key={`f${i}`} center={[p.lat, p.lon]} radius={3.5}
+            pathOptions={{ color, fillColor: 'white', fillOpacity: 1, weight: 1.5 }}>
             <Popup>{`+${p.t}h — ${p.vmax || '?'}kt`}</Popup>
           </CircleMarker>
         ))}
 
-        {/* Current Position */}
-        {currentPos && (
+        {cur && (
           <>
-            <Circle
-              center={[currentPos.lat, currentPos.lon]}
-              radius={60000}
-              pathOptions={{ color, fillColor: color, fillOpacity: 0.08, weight: 1, dashArray: '4,4' }}
-            />
-            <CircleMarker
-              center={[currentPos.lat, currentPos.lon]}
-              radius={8}
-              pathOptions={{ color: 'white', fillColor: color, fillOpacity: 1, weight: 3 }}
-            >
-              <Popup>
-                <strong>{storm.storm_name}</strong><br />
-                {storm.vmax_kt}kt · {storm.category}<br />
-                {currentPos.lat.toFixed(1)}°N, {currentPos.lon.toFixed(1)}°E
-              </Popup>
+            <Circle center={[cur.lat, cur.lon]} radius={50000}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.06, weight: 1, dashArray: '4,3' }} />
+            <CircleMarker center={[cur.lat, cur.lon]} radius={7}
+              pathOptions={{ color: 'white', fillColor: color, fillOpacity: 1, weight: 2.5 }}>
+              <Popup><strong>{storm.storm_name}</strong><br/>{storm.vmax_kt}kt · {storm.category}</Popup>
             </CircleMarker>
           </>
         )}
 
-        {/* Landfall Risk Markers */}
-        {showLandfall && (storm.landfall_risk || []).map((risk: any, i: number) => {
-          const coords = districtCoords[risk.district]
-          if (!coords) return null
+        {showLandfall && (storm.landfall_risk || []).map((r: any, i: number) => {
+          const co = DISTRICTS[r.district]
+          if (!co) return null
           return (
-            <CircleMarker
-              key={`land-${i}`}
-              center={coords}
-              radius={5 + risk.probability * 10}
-              pathOptions={{
-                color: '#ef4444',
-                fillColor: '#ef4444',
-                fillOpacity: 0.15 + risk.probability * 0.4,
-                weight: 1.5,
-              }}
-            >
-              <Popup>
-                <strong>{risk.district}</strong>, {risk.state}<br />
-                Landfall probability: {(risk.probability * 100).toFixed(0)}%
-              </Popup>
+            <CircleMarker key={`l${i}`} center={co} radius={4 + r.probability * 8}
+              pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.12 + r.probability * 0.35, weight: 1.5 }}>
+              <Popup><strong>{r.district}</strong>, {r.state}<br/>Landfall: {(r.probability * 100).toFixed(0)}%</Popup>
             </CircleMarker>
           )
         })}
       </MapContainer>
 
-      {/* Controls */}
       <div className="map-controls">
-        <button className={`map-btn ${showCone ? 'active' : ''}`} onClick={() => setShowCone(!showCone)}>
-          Cone
-        </button>
-        <button className={`map-btn ${showPaths ? 'active' : ''}`} onClick={() => setShowPaths(!showPaths)}>
-          Paths
-        </button>
-        <button className={`map-btn ${showLandfall ? 'active' : ''}`} onClick={() => setShowLandfall(!showLandfall)}>
-          Landfall
-        </button>
+        <button className={`map-btn ${showCone ? 'active' : ''}`} onClick={() => setShowCone(!showCone)}>Cone</button>
+        <button className={`map-btn ${showPaths ? 'active' : ''}`} onClick={() => setShowPaths(!showPaths)}>Paths</button>
+        <button className={`map-btn ${showLandfall ? 'active' : ''}`} onClick={() => setShowLandfall(!showLandfall)}>Landfall</button>
       </div>
 
-      {/* Legend */}
       <div className="map-legend">
-        <div className="map-legend-item">
-          <span className="legend-line" style={{ background: color }} />
-          Observed
-        </div>
-        <div className="map-legend-item">
-          <span className="legend-dash" style={{ borderColor: color }} />
-          Forecast
-        </div>
-        <div className="map-legend-item">
-          <span className="legend-dot" style={{ background: '#2563eb', opacity: 0.3 }} />
-          50% CI
-        </div>
-        <div className="map-legend-item">
-          <span className="legend-dot" style={{ background: '#3b82f6', opacity: 0.15, border: '1px dashed #3b82f6' }} />
-          90% CI
-        </div>
-        <div className="map-legend-item">
-          <span className="legend-dot" style={{ background: '#ef4444' }} />
-          Landfall
-        </div>
+        <div className="map-legend-item"><span className="legend-line" style={{ background: color }} />Track</div>
+        <div className="map-legend-item"><span className="legend-dash" style={{ borderColor: color }} />Forecast</div>
+        <div className="map-legend-item"><span className="legend-dot" style={{ background: '#2563eb', opacity: 0.3 }} />50% CI</div>
+        <div className="map-legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} />Landfall</div>
       </div>
     </div>
   )
