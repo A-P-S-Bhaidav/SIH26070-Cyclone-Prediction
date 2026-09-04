@@ -2,7 +2,7 @@
  * Dashboard — Map fills background. Panels float as overlay cards.
  * Layout: Storms (top-left) | Map (full) | Analysis (top-right) | Genesis (bottom-left)
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from './Header'
 import StormList from './StormList'
 import MapView from './MapView'
@@ -105,6 +105,56 @@ function mkTimeline(base: number, nP: number, nF: number) {
   return { timestamps: ts, vmax, mslp, vmaxUpper: u, vmaxLower: l }
 }
 
+const GENESIS_ZONES = [
+  { id: 'bob', region: 'Bay of Bengal', lead: '+48h', lat: 11.5, lon: 85.0, prob: 42, desc: 'Low-pressure area showing increasing convective organization over warm SST (29.5°C). Upper divergence favorable.' },
+  { id: 'as', region: 'Arabian Sea', lead: '+72h', lat: 14.2, lon: 68.5, prob: 28, desc: 'Weak circulation near Lakshadweep. Moderate VWS inhibiting development. SST 28.8°C supports surface fluxes.' },
+  { id: 'bob2', region: 'South BoB', lead: '+96h', lat: 8.0, lon: 88.0, prob: 18, desc: 'Equatorial disturbance with enhanced vorticity at 850hPa. MJO Phase 4 may support development after day 4.' },
+]
+
+function GenesisPanel() {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const scrollTo = (idx: number) => {
+    setActiveIdx(idx)
+    scrollRef.current?.children[idx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  }
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return
+    const el = scrollRef.current
+    const idx = Math.round(el.scrollLeft / el.clientWidth)
+    setActiveIdx(idx)
+  }
+
+  return (
+    <div className="float-panel panel-genesis">
+      <div style={{ padding: '10px 14px 6px', fontSize: '.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+        Genesis Watch
+      </div>
+      <div className="genesis-scroll" ref={scrollRef} onScroll={handleScroll}>
+        {GENESIS_ZONES.map(g => (
+          <div key={g.id} className="genesis-item">
+            <div className="genesis-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {g.region} · {g.lead}
+            </div>
+            <div className="genesis-text">
+              {g.lat.toFixed(1)}°N, {g.lon.toFixed(1)}°E — <span className="genesis-prob">{g.prob}%</span> probability
+            </div>
+            <div className="genesis-text" style={{ marginTop: '4px', fontSize: '.62rem' }}>{g.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div className="genesis-nav">
+        {GENESIS_ZONES.map((g, i) => (
+          <button key={g.id} className={`genesis-dot ${i === activeIdx ? 'active' : ''}`} onClick={() => scrollTo(i)} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [cyclones] = useState(DEMO)
@@ -157,18 +207,8 @@ export default function Dashboard() {
           <AnalysisPanel storm={active} />
         </div>
 
-        {/* Bottom-Left: Genesis Watch */}
-        <div className="float-panel panel-genesis">
-          <div className="genesis-card-inner">
-            <div className="genesis-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              Genesis Watch — Bay of Bengal
-            </div>
-            <div className="genesis-text">
-              Low-pressure area at 11.5°N, 85.0°E shows <span className="genesis-prob">42%</span> genesis probability in +48h. Monitoring convective organization over warm SST.
-            </div>
-          </div>
-        </div>
+        {/* Bottom-Left: Genesis Watch — horizontal swipe */}
+        <GenesisPanel />
       </div>
     </>
   )
