@@ -155,84 +155,120 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
 
 /* ═══ Responsive — Tablet (768–1024px) ═══ */
 @media(max-width:1024px){
-  .panel-storms{width:250px}
+  .panel-storms{width:240px}
   .panel-storms .storm-list{max-height:260px}
-  .panel-analysis{width:270px}
-  .panel-genesis{width:280px}
-  .map-controls{left:270px}
+  .panel-analysis{width:260px}
+  .panel-genesis{width:260px}
+  .map-controls{left:258px}
 }
 
 /* ═══ Responsive — Mobile (<768px) ═══ */
 @media(max-width:768px){
-  .app-header{height:48px;padding:0 14px}
-  .logo-text{font-size:.9rem}
+  .app-header{height:46px;padding:0 12px}
+  .logo-text{font-size:.88rem}
   .storm-count-pill{display:none}
 
-  /* Storms: horizontal scroll bar at top */
+  /* ── Storms: ultra-compact horizontal bar at top ── */
   .panel-storms{
-    position:fixed;top:48px;left:0;right:0;width:100%;
+    position:fixed;top:46px;left:0;right:0;width:100%;
     border-radius:0;z-index:1000;
-    box-shadow:0 4px 12px rgba(0,0,0,.1);
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
     border:none;border-bottom:1px solid var(--border);
   }
-  .panel-storms .panel-section-title{padding:6px 12px 4px;font-size:.55rem}
+  .panel-storms .panel-section-title{display:none}
   .panel-storms .storm-list{
     display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
     max-height:none;flex-direction:row;
+    -webkit-overflow-scrolling:touch;
   }
   .panel-storms .storm-list .storm-card{
-    min-width:200px;flex-shrink:0;scroll-snap-align:start;
+    min-width:160px;flex-shrink:0;scroll-snap-align:start;
     border-bottom:none;border-right:1px solid var(--border);
-    padding:8px 10px;
+    padding:6px 8px;
+  }
+  .panel-storms .storm-list .storm-card .storm-name{font-size:.75rem}
+  .panel-storms .storm-list .storm-card .storm-coords{font-size:.6rem}
+  .panel-storms .storm-list .storm-card .storm-stats{margin-top:4px;gap:2px}
+  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.82rem}
+  .panel-storms .storm-list .storm-card .ri-alert{display:none}
+
+  /* ── Map controls: horizontal row, below storms bar ── */
+  .map-controls{
+    position:fixed !important;
+    top:110px;left:8px;right:auto;bottom:auto !important;
+    z-index:1001;
+    flex-direction:row !important;
+    gap:4px;
+  }
+  .map-btn{padding:5px 10px;font-size:.6rem}
+
+  /* ── Map legend: horizontal row, above analysis ── */
+  .map-legend{
+    position:fixed !important;
+    bottom:26vh !important;left:50% !important;right:auto !important;
+    top:auto !important;
+    transform:translateX(-50%);
+    z-index:1001;
+    flex-direction:row !important;
+    gap:8px;
+    padding:5px 12px;
+    font-size:.55rem;
+    border-radius:20px;
+    background:var(--bg-surface);
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    white-space:nowrap;
   }
 
-  /* Analysis: compact bottom sheet — 35vh so map gets more space */
+  /* ── Analysis: compact bottom sheet — 25vh for max map ── */
   .panel-analysis{
     position:fixed;bottom:0;left:0;right:0;width:100%;
     top:auto;border-radius:14px 14px 0 0;
-    max-height:35vh;z-index:1000;
+    max-height:25vh;z-index:1000;
     box-shadow:0 -4px 20px rgba(0,0,0,.12);
     border:none;border-top:1px solid var(--border);
   }
-  .panel-analysis .analysis-tabs{border-radius:14px 14px 0 0}
+  .panel-analysis .analysis-tabs{border-radius:14px 14px 0 0;padding:0 6px}
+  .panel-analysis .analysis-tab{padding:7px 8px;font-size:.62rem}
   .panel-analysis::before{
     content:'';display:block;width:32px;height:4px;
     background:var(--border-strong);border-radius:2px;
-    margin:6px auto 0;
+    margin:5px auto 0;
   }
-  .panel-analysis .analysis-content{padding:8px 10px}
-  .panel-analysis .metric-card{padding:8px 10px;margin-bottom:6px}
-  .panel-analysis .metric-value{font-size:1.1rem}
-  .panel-analysis .gauge-wrap{height:90px;padding:4px 0}
-  .panel-analysis .section-title{margin:6px 0 4px}
+  .panel-analysis .analysis-content{padding:6px 10px}
+  .panel-analysis .metric-card{padding:6px 8px;margin-bottom:4px}
+  .panel-analysis .metric-value{font-size:1rem}
+  .panel-analysis .metric-label{font-size:.5rem}
+  .panel-analysis .gauge-wrap{height:75px;padding:2px 0}
+  .panel-analysis .gauge-pct{font-size:1.2rem}
+  .panel-analysis .section-title{margin:4px 0 3px;font-size:.52rem}
+  .panel-analysis .prob-bar-row{margin-bottom:3px}
+  .panel-analysis .factor-row{margin-bottom:3px}
 
-  /* Genesis: horizontal bar above analysis sheet */
-  .panel-genesis{
-    position:fixed;bottom:35vh;left:0;right:0;width:100%;
-    border-radius:0;z-index:1001;
-    box-shadow:0 -2px 8px rgba(0,0,0,.06);
-    border:none;border-top:1px solid var(--border);
-  }
-  .panel-genesis .genesis-item{padding:8px 12px}
-  .panel-genesis .genesis-title{font-size:.62rem}
-  .panel-genesis .genesis-text{font-size:.58rem}
-  .panel-genesis .genesis-nav{padding:0 0 4px}
-
-  .map-controls{top:auto;bottom:calc(35vh + 70px);left:8px;flex-direction:column}
-  .map-legend{bottom:calc(35vh + 70px);right:8px;left:auto;flex-direction:column;gap:4px;padding:4px 6px;font-size:.5rem}
+  /* ── Genesis: hidden on mobile — too much screen usage ── */
+  .panel-genesis{display:none}
 }
 
 /* ═══ Responsive — Small Mobile (<480px) ═══ */
 @media(max-width:480px){
-  .app-header{height:44px;padding:0 10px}
-  .logo-img{width:24px;height:24px}
-  .logo-text{font-size:.82rem}
-  .status-pill{padding:2px 8px;font-size:.58rem}
-  .header-right{gap:6px}
-  .panel-storms .storm-list .storm-card{min-width:170px;padding:7px 8px}
-  .panel-analysis{max-height:38vh}
-  .panel-genesis{bottom:38vh}
-  .map-controls{bottom:calc(38vh + 65px)}
-  .map-legend{bottom:calc(38vh + 65px)}
+  .app-header{height:42px;padding:0 8px}
+  .logo-img{width:22px;height:22px}
+  .logo-text{font-size:.78rem}
+  .status-pill{padding:2px 6px;font-size:.52rem}
+  .header-right{gap:5px}
+  .theme-toggle{width:26px;height:26px}
+
+  .panel-storms{top:42px}
+  .panel-storms .storm-list .storm-card{min-width:140px;padding:5px 6px}
+  .panel-storms .storm-list .storm-card .storm-name{font-size:.7rem}
+  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.75rem}
+  .panel-storms .storm-list .storm-card .storm-stats{gap:1px}
+  .panel-storms .storm-list .storm-card .cat-badge{font-size:.48rem;padding:1px 4px}
+
+  .map-controls{top:100px}
+  .map-btn{padding:4px 8px;font-size:.55rem}
+
+  .panel-analysis{max-height:28vh}
+  .map-legend{bottom:29vh !important;font-size:.5rem;padding:4px 8px;gap:6px}
 }
+
 
