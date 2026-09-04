@@ -1,5 +1,6 @@
 /**
- * Dashboard — Main layout with loading screen and theme toggle.
+ * Dashboard — Map fills background. Panels float as overlay cards.
+ * Layout: Storms (top-left) | Map (full) | Analysis (top-right) | Genesis (bottom-left)
  */
 import { useState, useEffect } from 'react'
 import Header from './Header'
@@ -128,25 +129,46 @@ export default function Dashboard() {
     <>
       {/* Loading Screen */}
       <div className={`loading-screen ${loading ? '' : 'fade-out'}`}>
-        <img src="/favicon.jpg" alt="Vayu Netra" className="loading-logo" style={{ borderRadius: '16px' }} />
+        <img src="/favicon.jpg" alt="Vayu Netra" className="loading-logo" style={{ borderRadius: '14px' }} />
         <div className="loading-title">Vayu Netra</div>
         <div className="loading-sub">NIO Cyclone Prediction System</div>
         <div className="loading-spinner" />
         <div className="loading-bar-track"><div className="loading-bar-fill" /></div>
       </div>
 
-      {/* Main App */}
       <Header isLive={isLive} stormCount={cyclones.length} theme={theme} onToggleTheme={toggleTheme} />
+
       <div className="dashboard-body">
-        <aside className="panel-left">
-          <StormList cyclones={cyclones} selectedId={selected} onSelect={setSelected} />
-        </aside>
-        <main className="panel-center">
+        {/* Full-screen Map */}
+        <div className="map-layer">
           <MapView storm={active} />
-        </main>
-        <aside className="panel-right">
+        </div>
+
+        {/* Top-Left: Tracked Storms */}
+        <div className="float-panel panel-storms">
+          <div className="panel-section-title">Tracked Storms</div>
+          <div className="storm-list">
+            <StormList cyclones={cyclones} selectedId={selected} onSelect={setSelected} />
+          </div>
+        </div>
+
+        {/* Top-Right: Analysis */}
+        <div className="float-panel panel-analysis">
           <AnalysisPanel storm={active} />
-        </aside>
+        </div>
+
+        {/* Bottom-Left: Genesis Watch */}
+        <div className="float-panel panel-genesis">
+          <div className="genesis-card-inner">
+            <div className="genesis-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Genesis Watch — Bay of Bengal
+            </div>
+            <div className="genesis-text">
+              Low-pressure area at 11.5°N, 85.0°E shows <span className="genesis-prob">42%</span> genesis probability in +48h. Monitoring convective organization over warm SST.
+            </div>
+          </div>
+        </div>
       </div>
     </>
   )
