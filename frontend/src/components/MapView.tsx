@@ -1,10 +1,12 @@
 /**
- * MapView — Leaflet map with 20 predicted paths, expanding cones, landfall markers.
- * Uses OpenStreetMap tiles (no API key required).
+ * MapView — Leaflet map with 20 predicted paths, expanding cones, landfall HEATMAP.
+ * Uses OpenStreetMap tiles (no API key).
  */
 import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Polyline, Polygon, Circle, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.heat'
 
 const SEV: Record<string, string> = {
   TD: '#3b82f6', CS: '#0ea5e9', SCS: '#10b981', VSCS: '#f59e0b', ESCS: '#f97316', SuCS: '#ef4444',
@@ -73,11 +75,61 @@ function FitBounds({ storm }: { storm: any }) {
   return null
 }
 
+// Landfall Heatmap Layer — uses leaflet.heat
 const DISTRICTS: Record<string, [number, number]> = {
   'South 24 Parganas': [21.87, 88.43], 'North 24 Parganas': [22.62, 88.85],
   'Kolkata': [22.57, 88.36], 'Balasore': [21.49, 86.93], 'Puri': [19.81, 85.83],
   'Ganjam': [19.58, 84.81], 'Srikakulam': [18.3, 84], 'Junagadh': [21.52, 70.46],
   'Porbandar': [21.64, 69.6], 'Mumbai': [19.08, 72.88],
+}
+
+function LandfallHeatmap({ risks, visible }: { risks: any[]; visible: boolean }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!visible || !risks || risks.length === 0) return
+
+    // Build heatmap data: each risk generates a cluster of nearby points for spread
+    const heatData: [number, number, number][] = []
+    const rng = seededRng('landfall-heat')
+
+    risks.forEach((r: any) => {
+      const coords = DISTRICTS[r.district]
+      if (!coords) return
+      const [lat, lon] = coords
+      const intensity = r.probability
+
+      // Create a cluster of points around the district for a natural heatmap spread
+      const numPoints = Math.max(8, Math.round(intensity * 30))
+      const spread = 0.15 + intensity * 0.25 // higher probability = wider spread
+      for (let i = 0; i < numPoints; i++) {
+        const dlat = (rng() - 0.5) * spread * 2
+        const dlon = (rng() - 0.5) * spread * 2
+        heatData.push([lat + dlat, lon + dlon, intensity])
+      }
+    })
+
+    const heat = L.heatLayer(heatData, {
+      radius: 35,
+      blur: 25,
+      maxZoom: 10,
+      max: 1,
+      gradient: {
+        0.1: '#fee2e2',   // very light red
+        0.25: '#fca5a5',  // light red
+        0.4: '#f87171',   // medium red
+        0.55: '#ef4444',  // red
+        0.7: '#dc2626',   // darker red
+        0.85: '#b91c1c',  // deep red
+        1.0: '#7f1d1d',   // darkest red
+      }
+    })
+
+    heat.addTo(map)
+    return () => { map.removeLayer(heat) }
+  }, [risks, visible, map])
+
+  return null
 }
 
 export default function MapView({ storm }: { storm: any }) {
@@ -104,6 +156,7 @@ export default function MapView({ storm }: { storm: any }) {
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <FitBounds storm={storm} />
 
+        {/* Confidence Cones */}
         {showCone && cone90.length > 2 && (
           <Polygon positions={cone90} pathOptions={{ color: '#3b82f6', weight: 1, dashArray: '5,4', fillColor: '#3b82f6', fillOpacity: 0.04 }} />
         )}
@@ -111,6 +164,7 @@ export default function MapView({ storm }: { storm: any }) {
           <Polygon positions={cone50} pathOptions={{ color: '#2563eb', weight: 1.5, fillColor: '#2563eb', fillOpacity: 0.08 }} />
         )}
 
+        {/* 20 Predicted Paths */}
         {showPaths && paths.map((path, i) => (
           <Polyline key={`p${i}`} positions={path.points}
             pathOptions={{ color, weight: path.weight, opacity: path.opacity, dashArray: i > 2 ? '3,3' : undefined }}>
@@ -119,14 +173,18 @@ export default function MapView({ storm }: { storm: any }) {
           </Polyline>
         ))}
 
+        {/* Past Track */}
         {past.length > 1 && <Polyline positions={past} pathOptions={{ color, weight: 3, opacity: 0.9 }} />}
+        {/* Forecast Track */}
         {future.length > 1 && <Polyline positions={future} pathOptions={{ color, weight: 2.5, opacity: 0.7, dashArray: '8,5' }} />}
 
+        {/* Past Track Points */}
         {track.filter((p: any) => p.t < 0).map((p: any, i: number) => (
           <CircleMarker key={`h${i}`} center={[p.lat, p.lon]} radius={2.5}
             pathOptions={{ color, fillColor: color, fillOpacity: 1, weight: 0 }} />
         ))}
 
+        {/* Forecast Points */}
         {fcPoints.map((p: any, i: number) => (
           <CircleMarker key={`f${i}`} center={[p.lat, p.lon]} radius={3.5}
             pathOptions={{ color, fillColor: 'white', fillOpacity: 1, weight: 1.5 }}>
@@ -134,6 +192,7 @@ export default function MapView({ storm }: { storm: any }) {
           </CircleMarker>
         ))}
 
+        {/* Current Position */}
         {cur && (
           <>
             <Circle center={[cur.lat, cur.lon]} radius={50000}
@@ -145,16 +204,8 @@ export default function MapView({ storm }: { storm: any }) {
           </>
         )}
 
-        {showLandfall && (storm.landfall_risk || []).map((r: any, i: number) => {
-          const co = DISTRICTS[r.district]
-          if (!co) return null
-          return (
-            <CircleMarker key={`l${i}`} center={co} radius={4 + r.probability * 8}
-              pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.12 + r.probability * 0.35, weight: 1.5 }}>
-              <Popup><strong>{r.district}</strong>, {r.state}<br/>Landfall: {(r.probability * 100).toFixed(0)}%</Popup>
-            </CircleMarker>
-          )
-        })}
+        {/* Landfall Heatmap — replaces red circles */}
+        <LandfallHeatmap risks={storm.landfall_risk || []} visible={showLandfall} />
       </MapContainer>
 
       <div className="map-controls">
@@ -167,7 +218,7 @@ export default function MapView({ storm }: { storm: any }) {
         <div className="map-legend-item"><span className="legend-line" style={{ background: color }} />Track</div>
         <div className="map-legend-item"><span className="legend-dash" style={{ borderColor: color }} />Forecast</div>
         <div className="map-legend-item"><span className="legend-dot" style={{ background: '#2563eb', opacity: 0.3 }} />50% CI</div>
-        <div className="map-legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} />Landfall</div>
+        <div className="map-legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} />Landfall Risk</div>
       </div>
     </div>
   )

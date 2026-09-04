@@ -168,44 +168,58 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   .logo-text{font-size:.9rem}
   .storm-count-pill{display:none}
 
-  /* Stack layout: top bar, map, bottom drawer */
+  /* Storms: horizontal scroll bar at top */
   .panel-storms{
     position:fixed;top:48px;left:0;right:0;width:100%;
     border-radius:0;z-index:1000;
     box-shadow:0 4px 12px rgba(0,0,0,.1);
     border:none;border-bottom:1px solid var(--border);
   }
-  .panel-storms .panel-section-title{padding:8px 14px 6px}
+  .panel-storms .panel-section-title{padding:6px 12px 4px;font-size:.55rem}
   .panel-storms .storm-list{
     display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
     max-height:none;flex-direction:row;
   }
   .panel-storms .storm-list .storm-card{
-    min-width:220px;flex-shrink:0;scroll-snap-align:start;
+    min-width:200px;flex-shrink:0;scroll-snap-align:start;
     border-bottom:none;border-right:1px solid var(--border);
+    padding:8px 10px;
   }
 
+  /* Analysis: compact bottom sheet — 35vh so map gets more space */
   .panel-analysis{
     position:fixed;bottom:0;left:0;right:0;width:100%;
-    top:auto;border-radius:16px 16px 0 0;
-    max-height:50vh;z-index:1000;
+    top:auto;border-radius:14px 14px 0 0;
+    max-height:35vh;z-index:1000;
     box-shadow:0 -4px 20px rgba(0,0,0,.12);
     border:none;border-top:1px solid var(--border);
   }
-  .panel-analysis .analysis-tabs{border-radius:16px 16px 0 0}
-  /* Pull handle */
+  .panel-analysis .analysis-tabs{border-radius:14px 14px 0 0}
   .panel-analysis::before{
-    content:'';display:block;width:36px;height:4px;
+    content:'';display:block;width:32px;height:4px;
     background:var(--border-strong);border-radius:2px;
-    margin:8px auto 0;
+    margin:6px auto 0;
   }
+  .panel-analysis .analysis-content{padding:8px 10px}
+  .panel-analysis .metric-card{padding:8px 10px;margin-bottom:6px}
+  .panel-analysis .metric-value{font-size:1.1rem}
+  .panel-analysis .gauge-wrap{height:90px;padding:4px 0}
+  .panel-analysis .section-title{margin:6px 0 4px}
 
+  /* Genesis: horizontal bar above analysis sheet */
   .panel-genesis{
-    display:none; /* Genesis data shown inside analysis on mobile */
+    position:fixed;bottom:35vh;left:0;right:0;width:100%;
+    border-radius:0;z-index:1001;
+    box-shadow:0 -2px 8px rgba(0,0,0,.06);
+    border:none;border-top:1px solid var(--border);
   }
+  .panel-genesis .genesis-item{padding:8px 12px}
+  .panel-genesis .genesis-title{font-size:.62rem}
+  .panel-genesis .genesis-text{font-size:.58rem}
+  .panel-genesis .genesis-nav{padding:0 0 4px}
 
-  .map-controls{top:auto;bottom:56%;left:8px;flex-direction:column}
-  .map-legend{bottom:auto;top:50%;right:8px;left:auto;flex-direction:column;gap:6px;padding:6px 8px;font-size:.55rem}
+  .map-controls{top:auto;bottom:calc(35vh + 70px);left:8px;flex-direction:column}
+  .map-legend{bottom:calc(35vh + 70px);right:8px;left:auto;flex-direction:column;gap:4px;padding:4px 6px;font-size:.5rem}
 }
 
 /* ═══ Responsive — Small Mobile (<480px) ═══ */
@@ -215,6 +229,10 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   .logo-text{font-size:.82rem}
   .status-pill{padding:2px 8px;font-size:.58rem}
   .header-right{gap:6px}
-  .panel-storms .storm-list .storm-card{min-width:180px;padding:10px}
-  .panel-analysis{max-height:55vh}
+  .panel-storms .storm-list .storm-card{min-width:170px;padding:7px 8px}
+  .panel-analysis{max-height:38vh}
+  .panel-genesis{bottom:38vh}
+  .map-controls{bottom:calc(38vh + 65px)}
+  .map-legend{bottom:calc(38vh + 65px)}
 }
+
