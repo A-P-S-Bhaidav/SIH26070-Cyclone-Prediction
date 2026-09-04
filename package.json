@@ -1,0 +1,7 @@
+{
+  "name": "sih26070-cyclone-prediction",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
