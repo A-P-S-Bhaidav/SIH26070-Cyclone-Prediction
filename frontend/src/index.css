@@ -71,12 +71,13 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
 ═══════════════════════════════════════════════════ */
 .dashboard-body{position:relative;flex:1;overflow:hidden}
 
-/* Map fills entire background */
-.map-layer{position:absolute;inset:0;z-index:1}
-.map-layer .leaflet-container{width:100%;height:100%}
+/* Map fills entire background — NO z-index so it doesn't trap leaflet controls */
+.map-layer{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
+.map-layer .leaflet-container{width:100% !important;height:100% !important}
+.map-layer .map-wrapper{width:100%;height:100%}
 
 /* Floating panels */
-.float-panel{position:absolute;z-index:10;background:var(--bg-surface);border-radius:var(--panel-radius);box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border);transition:box-shadow .2s}
+.float-panel{position:absolute;z-index:1000;background:var(--bg-surface);border-radius:var(--panel-radius);box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border);transition:box-shadow .2s}
 
 /* Top-left: Tracked Storms */
 .panel-storms{top:10px;left:10px;width:260px;max-height:calc(100% - 80px)}
