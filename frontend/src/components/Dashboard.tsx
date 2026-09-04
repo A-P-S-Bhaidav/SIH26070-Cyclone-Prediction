@@ -202,13 +202,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top-Right: Analysis */}
-        <div className="float-panel panel-analysis">
-          <AnalysisPanel storm={active} />
+        {/* Bottom Section: on desktop children float independently,
+            on mobile they stack into one unified bottom drawer:
+            Legend → Genesis → Analysis tabs */}
+        <div className="bottom-section">
+          {/* Mobile-only legend row */}
+          <div className="mobile-legend">
+            <div className="ml-item"><span className="ml-line" />Track</div>
+            <div className="ml-item"><span className="ml-dash" />Forecast</div>
+            <div className="ml-item"><span className="ml-dot" style={{ background: '#2563eb', opacity: 0.4 }} />50% CI</div>
+            <div className="ml-item"><span className="ml-dot" style={{ background: '#ef4444' }} />Landfall</div>
+          </div>
+          <GenesisPanel />
+          <div className="float-panel panel-analysis">
+            <AnalysisPanel storm={active} />
+          </div>
         </div>
-
-        {/* Bottom-Left: Genesis Watch — horizontal swipe */}
-        <GenesisPanel />
       </div>
     </>
   )

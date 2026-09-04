@@ -153,6 +153,10 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
 .risk-pct{font-family:var(--font-mono);font-size:1.05rem;font-weight:800}
 .alert-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:.68rem;font-weight:600;margin-bottom:10px}
 
+/* ═══ Bottom Section — Desktop: children float independently ═══ */
+.bottom-section{display:contents}
+.mobile-legend{display:none}
+
 /* ═══ Responsive — Tablet (768–1024px) ═══ */
 @media(max-width:1024px){
   .panel-storms{width:240px}
@@ -168,7 +172,7 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   .logo-text{font-size:.88rem}
   .storm-count-pill{display:none}
 
-  /* ── Storms: ultra-compact horizontal bar at top ── */
+  /* ── Storms: horizontal swipeable bar at top ── */
   .panel-storms{
     position:fixed;top:46px;left:0;right:0;width:100%;
     border-radius:0;z-index:1000;
@@ -177,75 +181,121 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   }
   .panel-storms .panel-section-title{display:none}
   .panel-storms .storm-list{
-    display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
+    display:flex;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;
     max-height:none;flex-direction:row;
     -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .panel-storms .storm-list::-webkit-scrollbar{display:none}
   .panel-storms .storm-list .storm-card{
-    min-width:160px;flex-shrink:0;scroll-snap-align:start;
+    min-width:170px;max-width:170px;flex-shrink:0;scroll-snap-align:start;
     border-bottom:none;border-right:1px solid var(--border);
-    padding:6px 8px;
+    padding:8px 10px;
   }
-  .panel-storms .storm-list .storm-card .storm-name{font-size:.75rem}
-  .panel-storms .storm-list .storm-card .storm-coords{font-size:.6rem}
+  .panel-storms .storm-list .storm-card .storm-name{font-size:.78rem}
+  .panel-storms .storm-list .storm-card .storm-coords{font-size:.6rem;margin-top:1px}
   .panel-storms .storm-list .storm-card .storm-stats{margin-top:4px;gap:2px}
-  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.82rem}
+  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.85rem}
   .panel-storms .storm-list .storm-card .ri-alert{display:none}
 
-  /* ── Map controls: horizontal row, below storms bar ── */
+  /* ── Map controls: top-right of map, below storms ── */
   .map-controls{
     position:fixed !important;
-    top:110px;left:8px;right:auto;bottom:auto !important;
+    top:auto !important;bottom:auto !important;
+    top:120px !important;right:8px !important;left:auto !important;
     z-index:1001;
     flex-direction:row !important;
     gap:4px;
   }
-  .map-btn{padding:5px 10px;font-size:.6rem}
+  .map-btn{padding:5px 10px;font-size:.62rem;border-radius:5px}
 
-  /* ── Map legend: horizontal row, above analysis ── */
-  .map-legend{
-    position:fixed !important;
-    bottom:26vh !important;left:50% !important;right:auto !important;
-    top:auto !important;
-    transform:translateX(-50%);
-    z-index:1001;
-    flex-direction:row !important;
-    gap:8px;
-    padding:5px 12px;
-    font-size:.55rem;
-    border-radius:20px;
+  /* ── Hide MapView's built-in legend on mobile (we show mobile-legend instead) ── */
+  .map-legend{display:none !important}
+
+  /* ══════════════════════════════════════════════
+     BOTTOM DRAWER: Legend → Genesis → Analysis
+     One unified stack that moves together
+  ══════════════════════════════════════════════ */
+  .bottom-section{
+    display:flex !important;
+    flex-direction:column;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    z-index:1000;
     background:var(--bg-surface);
-    box-shadow:0 2px 10px rgba(0,0,0,.12);
-    white-space:nowrap;
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -4px 24px rgba(0,0,0,.15);
+    max-height:42vh;
+    overflow:hidden;
   }
-
-  /* ── Analysis: compact bottom sheet — 25vh for max map ── */
-  .panel-analysis{
-    position:fixed;bottom:0;left:0;right:0;width:100%;
-    top:auto;border-radius:14px 14px 0 0;
-    max-height:25vh;z-index:1000;
-    box-shadow:0 -4px 20px rgba(0,0,0,.12);
-    border:none;border-top:1px solid var(--border);
-  }
-  .panel-analysis .analysis-tabs{border-radius:14px 14px 0 0;padding:0 6px}
-  .panel-analysis .analysis-tab{padding:7px 8px;font-size:.62rem}
-  .panel-analysis::before{
-    content:'';display:block;width:32px;height:4px;
+  /* Pull handle */
+  .bottom-section::before{
+    content:'';display:block;width:36px;height:4px;flex-shrink:0;
     background:var(--border-strong);border-radius:2px;
-    margin:5px auto 0;
+    margin:6px auto 4px;
   }
-  .panel-analysis .analysis-content{padding:6px 10px}
-  .panel-analysis .metric-card{padding:6px 8px;margin-bottom:4px}
-  .panel-analysis .metric-value{font-size:1rem}
-  .panel-analysis .metric-label{font-size:.5rem}
-  .panel-analysis .gauge-wrap{height:75px;padding:2px 0}
-  .panel-analysis .gauge-pct{font-size:1.2rem}
-  .panel-analysis .section-title{margin:4px 0 3px;font-size:.52rem}
-  .panel-analysis .prob-bar-row{margin-bottom:3px}
-  .panel-analysis .factor-row{margin-bottom:3px}
 
-  /* ── Genesis: hidden on mobile — too much screen usage ── */
-  .panel-genesis{display:none}
+  /* Mobile legend row — visible on mobile */
+  .mobile-legend{
+    display:flex !important;
+    align-items:center;justify-content:center;
+    gap:12px;padding:4px 12px;flex-shrink:0;
+    border-bottom:1px solid var(--border);
+    font-size:.58rem;font-weight:500;color:var(--text-secondary);
+  }
+  .ml-item{display:flex;align-items:center;gap:4px}
+  .ml-line{width:14px;height:2px;border-radius:1px;background:var(--blue-500)}
+  .ml-dash{width:14px;height:0;border-top:2px dashed var(--blue-500)}
+  .ml-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+  /* Genesis inside bottom drawer — no floating */
+  .bottom-section .float-panel.panel-genesis,
+  .bottom-section .panel-genesis{
+    position:static !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    border:none !important;
+    border-bottom:1px solid var(--border) !important;
+    width:100% !important;
+  }
+  .bottom-section .genesis-item{padding:6px 12px}
+  .bottom-section .genesis-title{font-size:.62rem}
+  .bottom-section .genesis-text{font-size:.58rem}
+  .bottom-section .genesis-nav{padding:2px 0 4px}
+  .bottom-section .genesis-scroll{max-height:60px}
+
+  /* Analysis inside bottom drawer — no floating */
+  .bottom-section .float-panel.panel-analysis{
+    position:static !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    border:none !important;
+    width:100% !important;
+    max-height:none !important;
+    flex:1;min-height:0;
+    overflow-y:auto;
+  }
+
+  /* Tabs fill full width */
+  .bottom-section .analysis-tabs{
+    border-radius:0;
+    padding:0;
+    display:flex;
+    width:100%;
+  }
+  .bottom-section .analysis-tab{
+    flex:1;
+    text-align:center;
+    padding:8px 4px;
+    font-size:.65rem;
+  }
+  .bottom-section .analysis-content{padding:8px 12px}
+  .bottom-section .metric-card{padding:8px 10px;margin-bottom:6px}
+  .bottom-section .metric-value{font-size:1.15rem}
+  .bottom-section .gauge-wrap{height:85px;padding:4px 0}
+  .bottom-section .gauge-pct{font-size:1.2rem}
+  .bottom-section .section-title{margin:6px 0 4px;font-size:.55rem}
 }
 
 /* ═══ Responsive — Small Mobile (<480px) ═══ */
@@ -258,17 +308,13 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   .theme-toggle{width:26px;height:26px}
 
   .panel-storms{top:42px}
-  .panel-storms .storm-list .storm-card{min-width:140px;padding:5px 6px}
-  .panel-storms .storm-list .storm-card .storm-name{font-size:.7rem}
-  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.75rem}
-  .panel-storms .storm-list .storm-card .storm-stats{gap:1px}
-  .panel-storms .storm-list .storm-card .cat-badge{font-size:.48rem;padding:1px 4px}
+  .panel-storms .storm-list .storm-card{min-width:150px;max-width:150px;padding:6px 8px}
+  .panel-storms .storm-list .storm-card .storm-name{font-size:.72rem}
+  .panel-storms .storm-list .storm-card .storm-stat-val{font-size:.78rem}
 
-  .map-controls{top:100px}
-  .map-btn{padding:4px 8px;font-size:.55rem}
+  .map-controls{top:108px !important}
+  .map-btn{padding:4px 8px;font-size:.58rem}
 
-  .panel-analysis{max-height:28vh}
-  .map-legend{bottom:29vh !important;font-size:.5rem;padding:4px 8px;gap:6px}
+  .bottom-section{max-height:45vh}
+  .bottom-section .analysis-tab{font-size:.6rem;padding:6px 2px}
 }
-
-
