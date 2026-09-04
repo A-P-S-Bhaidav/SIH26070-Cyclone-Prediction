@@ -210,6 +210,12 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
   }
   .map-btn{padding:5px 10px;font-size:.62rem;border-radius:5px}
 
+  /* ── Push default Leaflet zoom controls down on mobile ── */
+  .leaflet-top.leaflet-left .leaflet-control {
+    margin-top: 120px !important;
+    margin-left: 8px !important;
+  }
+
   /* ── Hide MapView's built-in legend on mobile (we show mobile-legend instead) ── */
   .map-legend{display:none !important}
 
@@ -226,7 +232,7 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
     background:var(--bg-surface);
     border-radius:16px 16px 0 0;
     box-shadow:0 -4px 24px rgba(0,0,0,.15);
-    max-height:42vh;
+    max-height:55vh;
     overflow:hidden;
   }
   /* Pull handle */
@@ -258,12 +264,13 @@ html,body{height:100%;font-family:var(--font-sans);background:var(--bg-body);col
     border:none !important;
     border-bottom:1px solid var(--border) !important;
     width:100% !important;
+    flex-shrink:0;
   }
-  .bottom-section .genesis-item{padding:6px 12px}
-  .bottom-section .genesis-title{font-size:.62rem}
-  .bottom-section .genesis-text{font-size:.58rem}
+  .bottom-section .genesis-item{padding:8px 12px}
+  .bottom-section .genesis-title{font-size:.65rem}
+  .bottom-section .genesis-text{font-size:.60rem; line-height:1.4}
   .bottom-section .genesis-nav{padding:2px 0 4px}
-  .bottom-section .genesis-scroll{max-height:60px}
+  .bottom-section .genesis-scroll{max-height:none}
 
   /* Analysis inside bottom drawer — no floating */
   .bottom-section .float-panel.panel-analysis{
