@@ -2,9 +2,9 @@
 # PyTorch and heavy ML libs are excluded to fit within Vercel's 250MB limit
 # The backend will automatically run in DEMO_MODE=true
 
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-pydantic==2.10.4
-pydantic-settings==2.7.1
-python-multipart==0.0.20
-sse-starlette==2.2.1
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+sse-starlette
